@@ -1,6 +1,6 @@
 -- Aspen Discovery: Event Mock Data Script (Idempotent & Registration Enabled)
 -- AI-generated, human-tested seeding scripts. DEV USE ONLY
--- VERSION: 3.0.0
+-- VERSION: 3.1.0
 -- Targets: MariaDB on aspen-db container
 
 START TRANSACTION;
@@ -14,7 +14,17 @@ UPDATE modules SET enabled = 1 WHERE name = 'Events';
 -- 0a. Enable Events for ALL Libraries
 UPDATE library SET aspenEventsToInclude = 1;
 
--- 0b. Create Events Indexing Settings
+-- 0b. Enable Event Registration for ALL Libraries (if column exists)
+SET @hasAllowEventRegistration = (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'library' AND COLUMN_NAME = 'allowEventRegistration'
+);
+SET @sql = IF(@hasAllowEventRegistration > 0, 'UPDATE library SET allowEventRegistration = 1', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 0c. Create Events Indexing Settings
 INSERT INTO events_indexing_settings (name, numberOfDaysToIndex, runFullUpdate)
 VALUES ('Default', 365, 1)
 ON DUPLICATE KEY UPDATE runFullUpdate = 1;
