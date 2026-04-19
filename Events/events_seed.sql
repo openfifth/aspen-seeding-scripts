@@ -256,6 +256,130 @@ SELECT t.id, loc.locationId FROM event_type t, location loc
 WHERE NOT EXISTS (SELECT 1 FROM event_type_location WHERE eventTypeId = t.id AND locationId = loc.locationId);
 
 -- ============================================================
+-- 5b. Create Attendee Categories (if table exists)
+-- ============================================================
+SET @hasAttendeeCategory = (
+    SELECT COUNT(*) FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aspen_event_attendee_category'
+);
+
+SET @seedCategories = IF(@hasAttendeeCategory > 0,
+    'INSERT IGNORE INTO aspen_event_attendee_category (name, staffDescription, publicDescription) VALUES
+    (''Child'',   ''Children ages 3-12'',             ''For kids ages 3-12''),
+    (''Adult'',   ''Adults 18 and over'',             ''For adults 18+''),
+    (''Teen'',    ''Teens ages 13-17'',               ''For teens ages 13-17''),
+    (''Senior'',  ''Seniors 65 and over'',            ''For seniors 65+''),
+    (''Toddler'', ''Toddlers and infants under 3'',   ''For little ones under 3''),
+    (''Family'',  ''Family groups (all ages)'',        ''Open to the whole family'')',
+    'SELECT ''aspen_event_attendee_category table not present, skipping'' AS info'
+);
+PREPARE stmt FROM @seedCategories; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ============================================================
+-- 5c. Link Attendee Categories to Event Types (if table exists)
+-- ============================================================
+SET @hasEventTypeAttendeeCategory = (
+    SELECT COUNT(*) FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'event_type_attendee_category'
+);
+
+-- Storytime → Toddler (15), Adult (15)
+SET @sql = IF(@hasEventTypeAttendeeCategory > 0 AND @hasAttendeeCategory > 0,
+    'INSERT INTO event_type_attendee_category (eventTypeId, attendeeCategoryId, maxAttendees)
+    SELECT t.id, c.id, 15 FROM event_type t, aspen_event_attendee_category c
+    WHERE t.title = ''Storytime'' AND c.name = ''Toddler''
+    AND NOT EXISTS (SELECT 1 FROM event_type_attendee_category WHERE eventTypeId = t.id AND attendeeCategoryId = c.id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(@hasEventTypeAttendeeCategory > 0 AND @hasAttendeeCategory > 0,
+    'INSERT INTO event_type_attendee_category (eventTypeId, attendeeCategoryId, maxAttendees)
+    SELECT t.id, c.id, 15 FROM event_type t, aspen_event_attendee_category c
+    WHERE t.title = ''Storytime'' AND c.name = ''Adult''
+    AND NOT EXISTS (SELECT 1 FROM event_type_attendee_category WHERE eventTypeId = t.id AND attendeeCategoryId = c.id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Library Lecture Series → Adult (50), Senior (50)
+SET @sql = IF(@hasEventTypeAttendeeCategory > 0 AND @hasAttendeeCategory > 0,
+    'INSERT INTO event_type_attendee_category (eventTypeId, attendeeCategoryId, maxAttendees)
+    SELECT t.id, c.id, 50 FROM event_type t, aspen_event_attendee_category c
+    WHERE t.title = ''Library Lecture Series'' AND c.name = ''Adult''
+    AND NOT EXISTS (SELECT 1 FROM event_type_attendee_category WHERE eventTypeId = t.id AND attendeeCategoryId = c.id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(@hasEventTypeAttendeeCategory > 0 AND @hasAttendeeCategory > 0,
+    'INSERT INTO event_type_attendee_category (eventTypeId, attendeeCategoryId, maxAttendees)
+    SELECT t.id, c.id, 50 FROM event_type t, aspen_event_attendee_category c
+    WHERE t.title = ''Library Lecture Series'' AND c.name = ''Senior''
+    AND NOT EXISTS (SELECT 1 FROM event_type_attendee_category WHERE eventTypeId = t.id AND attendeeCategoryId = c.id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Tech Help: intentionally left with no attendee categories (test: event type without categories)
+
+-- Workshop → Teen (20), Adult (20)
+SET @sql = IF(@hasEventTypeAttendeeCategory > 0 AND @hasAttendeeCategory > 0,
+    'INSERT INTO event_type_attendee_category (eventTypeId, attendeeCategoryId, maxAttendees)
+    SELECT t.id, c.id, 20 FROM event_type t, aspen_event_attendee_category c
+    WHERE t.title = ''Workshop'' AND c.name = ''Teen''
+    AND NOT EXISTS (SELECT 1 FROM event_type_attendee_category WHERE eventTypeId = t.id AND attendeeCategoryId = c.id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(@hasEventTypeAttendeeCategory > 0 AND @hasAttendeeCategory > 0,
+    'INSERT INTO event_type_attendee_category (eventTypeId, attendeeCategoryId, maxAttendees)
+    SELECT t.id, c.id, 20 FROM event_type t, aspen_event_attendee_category c
+    WHERE t.title = ''Workshop'' AND c.name = ''Adult''
+    AND NOT EXISTS (SELECT 1 FROM event_type_attendee_category WHERE eventTypeId = t.id AND attendeeCategoryId = c.id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Registered Program → Child (12), Teen (12), Adult (25), Family (10)
+SET @sql = IF(@hasEventTypeAttendeeCategory > 0 AND @hasAttendeeCategory > 0,
+    'INSERT INTO event_type_attendee_category (eventTypeId, attendeeCategoryId, maxAttendees)
+    SELECT t.id, c.id, 12 FROM event_type t, aspen_event_attendee_category c
+    WHERE t.title = ''Registered Program'' AND c.name = ''Child''
+    AND NOT EXISTS (SELECT 1 FROM event_type_attendee_category WHERE eventTypeId = t.id AND attendeeCategoryId = c.id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(@hasEventTypeAttendeeCategory > 0 AND @hasAttendeeCategory > 0,
+    'INSERT INTO event_type_attendee_category (eventTypeId, attendeeCategoryId, maxAttendees)
+    SELECT t.id, c.id, 12 FROM event_type t, aspen_event_attendee_category c
+    WHERE t.title = ''Registered Program'' AND c.name = ''Teen''
+    AND NOT EXISTS (SELECT 1 FROM event_type_attendee_category WHERE eventTypeId = t.id AND attendeeCategoryId = c.id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(@hasEventTypeAttendeeCategory > 0 AND @hasAttendeeCategory > 0,
+    'INSERT INTO event_type_attendee_category (eventTypeId, attendeeCategoryId, maxAttendees)
+    SELECT t.id, c.id, 25 FROM event_type t, aspen_event_attendee_category c
+    WHERE t.title = ''Registered Program'' AND c.name = ''Adult''
+    AND NOT EXISTS (SELECT 1 FROM event_type_attendee_category WHERE eventTypeId = t.id AND attendeeCategoryId = c.id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(@hasEventTypeAttendeeCategory > 0 AND @hasAttendeeCategory > 0,
+    'INSERT INTO event_type_attendee_category (eventTypeId, attendeeCategoryId, maxAttendees)
+    SELECT t.id, c.id, 10 FROM event_type t, aspen_event_attendee_category c
+    WHERE t.title = ''Registered Program'' AND c.name = ''Family''
+    AND NOT EXISTS (SELECT 1 FROM event_type_attendee_category WHERE eventTypeId = t.id AND attendeeCategoryId = c.id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ============================================================
 -- 6. Create Events
 -- eventLength in event table is in minutes (int)
 -- ============================================================
@@ -283,30 +407,30 @@ INSERT IGNORE INTO event (eventTypeId, locationId, title, description, startDate
 -- 7. Set registration, seats, and waitlist columns where schema supports it
 -- ============================================================
 
--- Enable registration for 3 events (not all of them)
+-- Enable registration for 4 events (not all of them)
 SET @setReg = IF(@hasRegRequired > 0,
-    'UPDATE event SET registrationRequired = 1 WHERE title IN (''Maker Saturday: 3D Printing'', ''Intro to Genealogy Research'', ''Digital Photography Workshop'')',
+    'UPDATE event SET registrationRequired = 1 WHERE title IN (''Drop-in Device Help'', ''Maker Saturday: 3D Printing'', ''Intro to Genealogy Research'', ''Digital Photography Workshop'')',
     'SELECT ''registrationRequired column not present, skipping'' AS info'
 );
 PREPARE stmt FROM @setReg; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- Seat limits for 2 of the 3 registered events (Maker Saturday left as unlimited)
+-- Seat limits for 3 of the 4 registered events (Maker Saturday left as unlimited)
 SET @setSeats = IF(@hasEventSeats > 0,
-    'UPDATE event SET numberOfSeats = 20 WHERE title IN (''Intro to Genealogy Research'', ''Digital Photography Workshop'')',
+    'UPDATE event SET numberOfSeats = 20 WHERE title IN (''Drop-in Device Help'', ''Intro to Genealogy Research'', ''Digital Photography Workshop'')',
     'SELECT ''numberOfSeats (event) column not present, skipping'' AS info'
 );
 PREPARE stmt FROM @setSeats; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- Enable waitlist for the 2 events that have seat limits
+-- Enable waitlist for the 3 events that have seat limits
 SET @setWaitingList = IF(@hasWaitingList > 0,
-    'UPDATE event SET waitingList = 1 WHERE title IN (''Intro to Genealogy Research'', ''Digital Photography Workshop'')',
+    'UPDATE event SET waitingList = 1 WHERE title IN (''Drop-in Device Help'', ''Intro to Genealogy Research'', ''Digital Photography Workshop'')',
     'SELECT ''waitingList column not present, skipping'' AS info'
 );
 PREPARE stmt FROM @setWaitingList; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- Waitlist seat cap for Genealogy only (Photography has unlimited waitlist)
+-- Waitlist seat cap for Genealogy and Device Help (Photography has unlimited waitlist)
 SET @setWaitingListSeats = IF(@hasWaitingListSeats > 0,
-    'UPDATE event SET waitingListNumberOfSeats = 10 WHERE title = ''Intro to Genealogy Research''',
+    'UPDATE event SET waitingListNumberOfSeats = 10 WHERE title IN (''Drop-in Device Help'', ''Intro to Genealogy Research'')',
     'SELECT ''waitingListNumberOfSeats column not present, skipping'' AS info'
 );
 PREPARE stmt FROM @setWaitingListSeats; EXECUTE stmt; DEALLOCATE PREPARE stmt;
